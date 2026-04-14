@@ -144,8 +144,8 @@ const LEVEL_NUM = {json.dumps({"L":1,"M":2,"H":3}, ensure_ascii=False)};
 const MAX_DISTANCE = 30;
 const FALLBACK_THRESHOLD = 60;
 const SPECIAL_TYPES = {json.dumps([
-  {"code":"HHHH","cn":"卷王之王","intro":"你是二观界的卷王，无人敢挑战","desc":"24题全部选A——你是二次元里的卷王。你的追番速度是光速，收藏量是天文数字。"},
-  {"code":"DRUNK","cn":"摆烂仙人","intro":"你已超脱二次元","desc":"24题全部选C——你已经看淡了一切。新番？别人追我就看看。限定谷？等等再说。"}
+  {"code":"HHHH", "cn":"摆烂仙人", "intro":"你已超脱二次元", "desc":"24题全部选C——你已经看淡了一切。新番？别人追我就看看。限定谷？等等再说。抽卡？不存在的。"},
+  {"code":"DRUNK", "cn":"卷王之王", "intro":"你是二观界的卷王，无人敢挑战", "desc":"24题全部选A——你是二次元里的卷王。你的追番速度是光速，收藏量是天文数字。"}
 ], ensure_ascii=False)};
 
 let state = {{"current":0, "answers":{{}}, "queue":[]}};
@@ -224,6 +224,7 @@ function finishQuiz() {{
   const vals = Object.values(state.answers);
   const allSame = vals.length > 0 && vals.every(v => v === vals[0]);
   const ST = SPECIAL_TYPES;
+  // vals[0]===3 全选高→摆烂(HHHH)，vals[0]===1 全选低→卷王(DRUNK)
   if (allSame && vals[0] === 3) {{
     showResult(ST[0].code, ST[0].cn, ST[0].intro, ST[0].desc, levels);
     return;
