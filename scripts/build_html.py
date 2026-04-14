@@ -115,11 +115,7 @@ def generate_html(test_name, test_subtitle, questions, types):
 <div class="card start-screen" id="start-screen">
   <h1>{test_name}</h1>
   <p class="subtitle">{test_subtitle}</p>
-  <div class="tags">
-    <span class="tag">{len(questions)} 道题</span>
-    <span class="tag">{len(types)} 种人格</span>
 
-  </div>
   <button class="restart-btn" onclick="startQuiz()" style="width:100%;">开始测试 →</button>
 </div>
 
