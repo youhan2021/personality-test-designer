@@ -34,9 +34,7 @@ You say: "Design a workplace personality test"
 | 15 dimensions | 5 categories × 3 dimensions each (Self, Emotion, Attitude, Action, Social) |
 | 24 main questions | 2 questions per dimension |
 | 20 standard types | MBTI-style personality archetypes |
-| 2 hidden types | "HHHH" (all As) and "DRUNK" (all Cs) |
 | Radar chart | Visual profile of all 15 dimensions |
-| Top-5 ranking | Shows your top 5 closest personality types |
 | Shuffled questions | Questions appear in random order each attempt |
 
 ### Architecture
@@ -81,8 +79,7 @@ result = subprocess.run([
     "--test-subtitle", "Discover yourself",
     "--data-json", json.dumps({
         "questions": [...],
-        "types": [...],
-        "special_types": [...]
+        "types": [...]
     })
 ], capture_output=True, text=True)
 
@@ -130,9 +127,7 @@ url = result.stdout.strip().split("PREVIEW_URL:")[1]
 | 15 个维度 | 5 大类 × 3 维度（自我、情感、态度、行动、社交） |
 | 24 道主测题 | 每维度 2 题 |
 | 20 种标准人格 | 类 MBTI 风格人格原型 |
-| 2 种隐藏人格 | "HHHH"（全选A）和 "DRUNK"（全选C） |
 | 雷达图 | 可视化展示 15 维度得分 |
-| Top-5 排行榜 | 显示最匹配的 5 种人格类型 |
 | 题目乱序 | 每次作答题目顺序随机 |
 
 ### 目录结构
@@ -175,7 +170,7 @@ result = subprocess.run([
     "--data-json", json.dumps({
         "questions": [...],    # 题目列表
         "types": [...],       # 标准人格列表
-        "special_types": [...] # 隐藏人格列表
+
     })
 ], capture_output=True, text=True)
 

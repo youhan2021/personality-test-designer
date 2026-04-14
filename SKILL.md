@@ -80,7 +80,7 @@ So(社交):  So1-线下社交, So2-亲密度,  So3-自我呈现
 python3 ~/.hermes/skills/productivity/personality-test-designer/scripts/generate_html.py \
     --test-name "测试名称" \
     --test-subtitle "副标题" \
-    --data-json '{"questions":[...], "types":[...], "special_types":[...]}'
+    --data-json '{"questions":[...], "types":[...]}'
 ```
 
 脚本会：
@@ -98,10 +98,6 @@ python3 ~/.hermes/skills/productivity/personality-test-designer/scripts/generate
   ],
   "types": [
     {"code":"ENFP", "cn":"二次元交际花", "pattern":"HHH-HHH-HHH-HHH-HHH", "intro":"一句话", "desc":"详细描述"}
-  ],
-  "special_types": [
-    {"code":"HHHH", "cn":"卷王之王", "intro":"一句话", "desc":"描述"},
-    {"code":"DRUNK", "cn":"摆烂仙人", "intro":"一句话", "desc":"描述"}
   ]
 }
 ```

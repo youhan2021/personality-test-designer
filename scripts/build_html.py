@@ -40,11 +40,10 @@ DIM_LABELS = {
 }
 
 # ── HTML 生成器 ─────────────────────────────────────────────────────
-def generate_html(test_name, test_subtitle, questions, types, special_types):
+def generate_html(test_name, test_subtitle, questions, types):
     """
     questions: list of {id, dim, text, options: [{label, value}]}
     types:     list of {code, cn, pattern, intro, desc}
-    special_types: list of {code, cn, intro, desc}
     """
 
     # 如果直接传了数据，用内嵌数据模式（不走模板替换）
@@ -99,18 +98,11 @@ def generate_html(test_name, test_subtitle, questions, types, special_types):
     .result-name {{ font-size: 26px; margin-bottom: 8px; }}
     .result-intro {{ color: var(--accent); font-size: 15px; margin-bottom: 28px; }}
     .result-desc {{ color: var(--text-dim); font-size: 14px; line-height: 1.8; text-align: left; margin-bottom: 28px; max-height: 200px; overflow-y: auto; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 12px; }}
-    .result-rank {{ text-align: left; margin-bottom: 24px; }}
-    .result-rank h3 {{ font-size: 13px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }}
-    .rank-item {{ display: flex; align-items: center; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; background: rgba(255,255,255,0.03); font-size: 14px; }}
-    .rank-item .num {{ width: 24px; height: 24px; background: var(--primary); border-radius: 50%; text-align: center; line-height: 24px; font-size: 12px; margin-right: 12px; flex-shrink: 0; }}
-    .rank-item .rname {{ flex: 1; }}
-    .rank-item .rdist {{ color: var(--text-dim); font-size: 12px; margin-left: 12px; }}
     .chart-wrap {{ margin: 0 auto 24px; }}
     canvas#radar {{ display: block; margin: 0 auto; }}
     .restart-btn {{ background: var(--primary); color: #fff; border: none; border-radius: 99px; padding: 14px 36px; font-size: 16px; cursor: pointer; transition: background 0.2s; }}
     .restart-btn:hover {{ background: var(--primary-dark); }}
     .hidden {{ display: none !important; }}
-    .special-hint {{ background: rgba(225,112,85,0.15); border: 1px solid rgba(225,112,85,0.3); border-radius: 10px; padding: 12px 16px; font-size: 13px; color: var(--danger); margin-bottom: 20px; text-align: center; }}
   </style>
 </head>
 <body>
@@ -126,13 +118,12 @@ def generate_html(test_name, test_subtitle, questions, types, special_types):
   <div class="tags">
     <span class="tag">{len(questions)} 道题</span>
     <span class="tag">{len(types)} 种人格</span>
-    <span class="tag">{len(special_types)} 个隐藏人格</span>
+
   </div>
   <button class="restart-btn" onclick="startQuiz()" style="width:100%;">开始测试 →</button>
 </div>
 
 <div class="card hidden" id="question-screen">
-  <div class="special-hint hidden" id="special-hint"></div>
   <p class="question-text" id="q-text">题目加载中...</p>
   <div class="options" id="options"></div>
 </div>
@@ -144,10 +135,6 @@ def generate_html(test_name, test_subtitle, questions, types, special_types):
   <div class="result-intro" id="r-intro"></div>
   <div class="chart-wrap"><canvas id="radar" width="280" height="280"></canvas></div>
   <div class="result-desc" id="r-desc"></div>
-  <div class="result-rank" id="r-rank">
-    <h3>人格匹配排行榜</h3>
-    <div id="rank-list"></div>
-  </div>
   <button class="restart-btn" onclick="restart()">重新测试 ↻</button>
 </div>
 
@@ -156,13 +143,12 @@ const DIM_ORDER = {json.dumps(DIM_ORDER, ensure_ascii=False)};
 const DIM_LABELS = {json.dumps(DIM_LABELS, ensure_ascii=False)};
 const QUESTIONS = {json.dumps(questions, ensure_ascii=False)};
 const STANDARD_TYPES = {json.dumps(types, ensure_ascii=False)};
-const SPECIAL_TYPES = {json.dumps(special_types, ensure_ascii=False)};
+
 const LEVEL_THRESHOLDS = {{ L:[2,3], M:[4,4], H:[5,6] }};
 const LEVEL_NUM = {{ L:1, M:2, H:3 }};
 const MAX_DISTANCE = 30;
-const FALLBACK_THRESHOLD = 60;
 
-let state = {{ current:0, answers:{{}}, queue:[], isSpecial:false, isDrunk:false, hiddenCode:null }};
+let state = {{ current:0, answers:{{}}, queue:[] }};
 
 function parsePattern(p) {{ return p.replace(/-/g,'').split(''); }}
 function calcDimScores(answers) {{
@@ -200,12 +186,11 @@ function shuffle(arr) {{
 }}
 
 function startQuiz() {{
-  state = {{ current:0, answers:{{}}, queue:shuffle([...QUESTIONS]), isSpecial:false, isDrunk:false, hiddenCode:null }};
+  state = {{ current:0, answers:{{}}, queue:shuffle([...QUESTIONS]) }};
   document.getElementById('start-screen').classList.add('hidden');
   document.getElementById('progress-wrap').classList.remove('hidden');
   document.getElementById('result-screen').classList.add('hidden');
   document.getElementById('question-screen').classList.remove('hidden');
-  document.getElementById('special-hint').classList.add('hidden');
   renderQuestion();
 }}
 
@@ -214,7 +199,6 @@ function renderQuestion() {{
   if (!q) {{ finishQuiz(); return; }}
   document.getElementById('progress-fill').style.width = ((state.current)/state.queue.length*100)+'%';
   document.getElementById('progress-text').textContent = `${{state.current}} / ${{state.queue.length}}`;
-  document.getElementById('special-hint').classList.add('hidden');
   document.getElementById('q-text').textContent = q.text;
   const opts = document.getElementById('options');
   opts.innerHTML = '';
@@ -238,27 +222,14 @@ function finishQuiz() {{
   const allTypes = STANDARD_TYPES.map(t=>({{...t,...matchType(levels,t.pattern)}}));
   allTypes.sort((a,b)=>a.distance-b.distance||b.exact-a.exact||b.similarity-a.similarity);
   const best = allTypes[0];
-  if (best.similarity < FALLBACK_THRESHOLD) {{
-    const fallback = SPECIAL_TYPES.find(t=>t.code==='HHHH')||SPECIAL_TYPES[0];
-    showResult(fallback.code, fallback.cn, fallback.intro, fallback.desc, allTypes, levels);
-  }} else {{
-    showResult(best.code, best.cn, best.intro, best.desc, allTypes, levels);
-  }}
+  showResult(best.code, best.cn, best.intro, best.desc, levels);
 }}
 
-function showResult(code, cn, intro, desc, rankings, levels) {{
+function showResult(code, cn, intro, desc, levels) {{
   document.getElementById('r-code').textContent = code;
   document.getElementById('r-name').textContent = cn;
   document.getElementById('r-intro').textContent = intro;
   document.getElementById('r-desc').textContent = desc;
-  const list = document.getElementById('rank-list');
-  list.innerHTML = '';
-  rankings.slice(0,5).forEach((t,i)=>{{
-    const div = document.createElement('div');
-    div.className='rank-item';
-    div.innerHTML=`<span class=\"num\">${{i+1}}</span><span class=\"rname\">${{t.code}} (${{t.cn}})</span><span class=\"rdist\">距离 ${{t.distance}}</span>`;
-    list.appendChild(div);
-  }});
   drawRadar(levels);
 }}
 
@@ -354,14 +325,12 @@ def main():
 
     questions = data.get("questions", [])
     types = data.get("types", [])
-    special_types = data.get("special_types", [])
 
     html = generate_html(
         test_name=args.test_name,
         test_subtitle=args.test_subtitle,
         questions=questions,
         types=types,
-        special_types=special_types,
     )
 
     out_file = OUT_DIR / build_filename(args.test_name)
