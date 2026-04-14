@@ -59,9 +59,14 @@ So(社交):  So1-线下社交, So2-亲密度,  So3-自我呈现
 ## 1. 测试概述
 ## 2. 维度定义（12个）
 ## 3. 完整题目清单（24道）
-## 4. 人格类型完整列表（20+2）
+## 4. 人格类型完整列表（20种，不含隐藏人格）
 ## 5. 评分算法
-## 6. 理论验证（全A/全B/全C结果）
+
+**隐藏人格检测**（硬编码，无需在 JSON 中传递）：
+- 全选 A（所有题 value=3，最高分）→ DRUNK「卷王之王」
+- 全选 C（所有题 value=1，最低分）→ HHHH「摆烂仙人」
+
+检测与题目顺序无关，只检查所有答案是否相同。
 ```
 
 ### 关键约束
@@ -77,7 +82,7 @@ So(社交):  So1-线下社交, So2-亲密度,  So3-自我呈现
 设计稿完成后，立即调用 Python 脚本生成 HTML：
 
 ```bash
-python3 ~/.hermes/skills/productivity/personality-test-designer/scripts/generate_html.py \
+python3 ~/.hermes/skills/productivity/personality-test-designer/scripts/build_html.py \
     --test-name "测试名称" \
     --test-subtitle "副标题" \
     --data-json '{"questions":[...], "types":[...]}'
@@ -153,7 +158,7 @@ personality-test-designer/
 ├── config.env.example    # 配置模板
 ├── .gitignore
 └── scripts/
-    ├── generate_html.py   # HTML 生成脚本
+    ├── build_html.py       # HTML 生成脚本
     └── start_server.py   # 服务器启动脚本
 ```
 
