@@ -143,12 +143,16 @@ const DIM_ORDER = {json.dumps(DIM_ORDER, ensure_ascii=False)};
 const DIM_LABELS = {json.dumps(DIM_LABELS, ensure_ascii=False)};
 const QUESTIONS = {json.dumps(questions, ensure_ascii=False)};
 const STANDARD_TYPES = {json.dumps(types, ensure_ascii=False)};
-
-const LEVEL_THRESHOLDS = {{ L:[2,3], M:[4,4], H:[5,6] }};
-const LEVEL_NUM = {{ L:1, M:2, H:3 }};
+const LEVEL_THRESHOLDS = {json.dumps({"L":[2,3],"M":[4,4],"H":[5,6]}, ensure_ascii=False)};
+const LEVEL_NUM = {json.dumps({"L":1,"M":2,"H":3}, ensure_ascii=False)};
 const MAX_DISTANCE = 30;
+const FALLBACK_THRESHOLD = 60;
+const SPECIAL_TYPES = {json.dumps([
+  {"code":"HHHH","cn":"卷王之王","intro":"你是二观界的卷王，无人敢挑战","desc":"24题全部选A——你是二次元里的卷王。你的追番速度是光速，收藏量是天文数字。"},
+  {"code":"DRUNK","cn":"摆烂仙人","intro":"你已超脱二次元","desc":"24题全部选C——你已经看淡了一切。新番？别人追我就看看。限定谷？等等再说。"}
+], ensure_ascii=False)};
 
-let state = {{ current:0, answers:{{}}, queue:[] }};
+let state = {{"current":0, "answers":{{}}, "queue":[]}};
 
 function parsePattern(p) {{ return p.replace(/-/g,'').split(''); }}
 function calcDimScores(answers) {{
@@ -161,23 +165,25 @@ function calcDimScores(answers) {{
 }}
 function scoresToLevels(scores) {{
   const levels = {{}};
+  const LT = LEVEL_THRESHOLDS;
   for (const [dim,score] of Object.entries(scores)) {{
-    if (score <= LEVEL_THRESHOLDS.L[1]) levels[dim]='L';
-    else if (score >= LEVEL_THRESHOLDS.H[0]) levels[dim]='H';
+    if (score <= LT.L[1]) levels[dim]='L';
+    else if (score >= LT.H[0]) levels[dim]='H';
     else levels[dim]='M';
   }}
   return levels;
 }}
 function matchType(userLevels, pattern) {{
   const tp = parsePattern(pattern);
+  const LN = LEVEL_NUM;
   let dist=0, exact=0;
   for (let i=0;i<DIM_ORDER.length;i++) {{
-    const u = LEVEL_NUM[userLevels[DIM_ORDER[i]]||'M'];
-    const t = LEVEL_NUM[tp[i]||'M'];
+    const u = LN[userLevels[DIM_ORDER[i]]||'M'];
+    const t = LN[tp[i]||'M'];
     dist += Math.abs(u-t);
     if (u===t) exact++;
   }}
-  return {{ distance:dist, exact, similarity: Math.max(0,Math.round((1-dist/MAX_DISTANCE)*100)) }};
+  return {{ "distance":dist, "exact":exact, "similarity": Math.max(0,Math.round((1-dist/MAX_DISTANCE)*100)) }};
 }}
 function shuffle(arr) {{
   const a=[...arr];
@@ -186,7 +192,7 @@ function shuffle(arr) {{
 }}
 
 function startQuiz() {{
-  state = {{ current:0, answers:{{}}, queue:shuffle([...QUESTIONS]) }};
+  state = {{"current":0, "answers":{{}}, "queue":shuffle([...QUESTIONS])}};
   document.getElementById('start-screen').classList.add('hidden');
   document.getElementById('progress-wrap').classList.remove('hidden');
   document.getElementById('result-screen').classList.add('hidden');
@@ -198,7 +204,7 @@ function renderQuestion() {{
   const q = state.queue[state.current];
   if (!q) {{ finishQuiz(); return; }}
   document.getElementById('progress-fill').style.width = ((state.current)/state.queue.length*100)+'%';
-  document.getElementById('progress-text').textContent = `${{state.current}} / ${{state.queue.length}}`;
+  document.getElementById('progress-text').textContent = state.current + ' / ' + state.queue.length;
   document.getElementById('q-text').textContent = q.text;
   const opts = document.getElementById('options');
   opts.innerHTML = '';
@@ -206,7 +212,7 @@ function renderQuestion() {{
   q.options.forEach((opt,idx)=>{{
     const btn = document.createElement('button');
     btn.className='opt-btn';
-    btn.innerHTML=`<span class=\"opt-label\">${{labels[idx]||(idx+1)}}</span>${{opt.label}}`;
+    btn.innerHTML='<span class="opt-label">'+(labels[idx]||(idx+1))+'</span>'+opt.label;
     btn.onclick=()=>{{ state.answers[q.id]=opt.value; state.current++; renderQuestion(); }};
     opts.appendChild(btn);
   }});
@@ -219,10 +225,25 @@ function finishQuiz() {{
   rs.classList.remove('hidden');
   const scores = calcDimScores(state.answers);
   const levels = scoresToLevels(scores);
+  const vals = Object.values(state.answers);
+  const allSame = vals.length > 0 && vals.every(v => v === vals[0]);
+  const ST = SPECIAL_TYPES;
+  if (allSame && vals[0] === 3) {{
+    showResult(ST[0].code, ST[0].cn, ST[0].intro, ST[0].desc, levels);
+    return;
+  }}
+  if (allSame && vals[0] === 1) {{
+    showResult(ST[1].code, ST[1].cn, ST[1].intro, ST[1].desc, levels);
+    return;
+  }}
   const allTypes = STANDARD_TYPES.map(t=>({{...t,...matchType(levels,t.pattern)}}));
   allTypes.sort((a,b)=>a.distance-b.distance||b.exact-a.exact||b.similarity-a.similarity);
   const best = allTypes[0];
-  showResult(best.code, best.cn, best.intro, best.desc, levels);
+  if (best.similarity < FALLBACK_THRESHOLD) {{
+    showResult(ST[0].code, ST[0].cn, ST[0].intro, ST[0].desc, levels);
+  }} else {{
+    showResult(best.code, best.cn, best.intro, best.desc, levels);
+  }}
 }}
 
 function showResult(code, cn, intro, desc, levels) {{
@@ -238,6 +259,7 @@ function drawRadar(userLevels) {{
   const ctx = canvas.getContext('2d');
   const cx = canvas.width/2, cy = canvas.height/2;
   const r = 100;
+  const LN = LEVEL_NUM;
   const n = DIM_ORDER.length;
   const angleStep = (2*Math.PI)/n;
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -272,7 +294,7 @@ function drawRadar(userLevels) {{
   }}
   ctx.beginPath();
   for (let i=0;i<n;i++) {{
-    const val = LEVEL_NUM[userLevels[DIM_ORDER[i]]||'M'];
+    const val = LN[userLevels[DIM_ORDER[i]]||'M'];
     const angle = i*angleStep - Math.PI/2;
     const radius = r * val / 3;
     const x = cx + radius*Math.cos(angle);
@@ -286,7 +308,7 @@ function drawRadar(userLevels) {{
   ctx.lineWidth=2;
   ctx.stroke();
   for (let i=0;i<n;i++) {{
-    const val = LEVEL_NUM[userLevels[DIM_ORDER[i]]||'M'];
+    const val = LN[userLevels[DIM_ORDER[i]]||'M'];
     const angle = i*angleStep - Math.PI/2;
     ctx.beginPath();
     ctx.arc(cx+r*val/3*Math.cos(angle), cy+r*val/3*Math.sin(angle), 4, 0, 2*Math.PI);
